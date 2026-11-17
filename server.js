@@ -8,7 +8,6 @@ app.use(express.json({ limit: "10mb" }));
 const TOKEN = process.env.MTLS_PROXY_TOKEN;
 if (!TOKEN) {
   console.error("MTLS_PROXY_TOKEN não definido. Configure no host.");
-  process.exit(1);
 }
 
 const ENDPOINTS = {
@@ -17,7 +16,7 @@ const ENDPOINTS = {
 };
 
 function auth(req, res, next) {
-  if (req.headers["x-proxy-token"] !== TOKEN) {
+  if (!TOKEN || req.headers["x-proxy-token"] !== TOKEN) {
     return res.status(401).json({ error: "Unauthorized" });
   }
   next();
@@ -149,5 +148,10 @@ app.post("/consultar", auth, async (req, res) => {
   }
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`mTLS proxy ouvindo em :${port}`));
+// Na Vercel o app é exportado como função; em outros hosts (Render, Docker) escuta numa porta.
+if (!process.env.VERCEL) {
+  const port = process.env.PORT || 3000;
+  app.listen(port, () => console.log(`mTLS proxy ouvindo em :${port}`));
+}
+
+export default app;
